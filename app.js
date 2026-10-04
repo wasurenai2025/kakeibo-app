@@ -272,3 +272,106 @@ records.unshift(r);
 save();
 return{saved:true,id:r.id,total:x.amount}}}).catch?.(()=>{});
 
+// ボタン選択＋電卓式の手入力
+const MANUAL_DEFAULTS={
+  '食費':['野菜','肉','フルーツ','調味料','お菓子','飲料','外食','その他'],
+  '日用品':['洗剤','清掃用品','キッチン消耗品','衛生用品','コンタクト','その他'],
+  '電気':['電気料金'],'ガス':['ガス料金'],'水道':['水道料金'],
+  '娯楽費':['Netflix','U-NEXT','Amazonプライム','映画','ゲーム','本','その他'],
+  '趣味・学習':['ChatGPT','電子書籍','オンライン講座','その他'],
+  '税金・社会保険':['住民税','自動車税','国民健康保険','年金','その他'],
+  '公共料金・放送':['NHK','その他'],
+  '交通費':['電車','バス','タクシー','ガソリン','その他'],
+  '医療費':['病院','薬','その他'],'その他':['その他']
+};
+let manualCustom=JSON.parse(localStorage.getItem('kakeibo-custom-subs-v1')||'{}');
+Object.keys(MANUAL_DEFAULTS).forEach(main=>{
+  const learned=Array.isArray(manualCustom[main])?manualCustom[main]:[];
+  C[main]=[...new Set([...MANUAL_DEFAULTS[main],...learned])];
+});
+let manualMain='食費',manualSub='野菜',manualExpression='',manualAmount=0,manualItems=[];
+function ensureManualPanel(){
+  if($('#manualPanel'))return;
+  const panel=document.createElement('div');
+  panel.id='manualPanel';
+  panel.hidden=true;
+  panel.innerHTML=`<div class="manual-step"><span>1</span><strong>項目を選ぶ</strong></div>
+    <div id="manualMainButtons" class="choice-grid main-choices"></div>
+    <div class="manual-step"><span>2</span><strong>内訳を選ぶ</strong></div>
+    <div id="manualSubButtons" class="choice-grid sub-choices"></div>
+    <div class="custom-sub-row"><input id="customSubInput" type="text" placeholder="新しい項目（例：NHK）"><button type="button" id="addCustomSubBtn">追加</button></div>
+    <p class="field-help">一度追加した項目は、次回からボタンで選べます。</p>
+    <div class="manual-step"><span>3</span><strong>金額を計算する</strong></div>
+    <div class="calculator-display"><small id="calcLabel">食費 ＞ 野菜</small><strong id="calcExpression">0</strong><span id="calcResult">0円</span></div>
+    <div id="calcKeys" class="calc-keys">
+      <button type="button" data-key="7">7</button><button type="button" data-key="8">8</button><button type="button" data-key="9">9</button><button type="button" class="operator" data-key="÷">÷</button>
+      <button type="button" data-key="4">4</button><button type="button" data-key="5">5</button><button type="button" data-key="6">6</button><button type="button" class="operator" data-key="×">×</button>
+      <button type="button" data-key="1">1</button><button type="button" data-key="2">2</button><button type="button" data-key="3">3</button><button type="button" class="operator" data-key="−">−</button>
+      <button type="button" data-key="0">0</button><button type="button" data-key="00">00</button><button type="button" class="clear-key" data-key="C">C</button><button type="button" class="operator" data-key="＋">＋</button>
+      <button type="button" class="equal-key" data-key="＝">＝ 合計</button>
+    </div>
+    <button type="button" class="add-calculated-button" id="addCalculatedBtn">この項目を追加</button>
+    <div id="manualAddedList" class="manual-added-list"></div>
+    <div class="review-total manual-total"><span>入力中の合計</span><strong id="manualGrandTotal">¥0</strong></div>
+    <div class="dialog-actions"><button type="button" class="primary-button" id="manualReviewBtn">確認画面へ進む</button></div>`;
+  $('#capturePanel').before(panel);
+  $('#calcKeys').onclick=e=>{const key=e.target.dataset.key;if(!key)return;handleCalcKey(key)};
+  $('#addCustomSubBtn').onclick=addCustomSub;
+  $('#addCalculatedBtn').onclick=addCalculatedItem;
+  $('#manualReviewBtn').onclick=finishManualEntry;
+}
+function renderManualChoices(){
+  $('#manualMainButtons').innerHTML=Object.keys(C).map(x=>`<button type="button" data-main="${esc(x)}" class="${x===manualMain?'selected':''}">${esc(x)}</button>`).join('');
+  $('#manualSubButtons').innerHTML=(C[manualMain]||['その他']).map(x=>`<button type="button" data-sub="${esc(x)}" class="${x===manualSub?'selected':''}">${esc(x)}</button>`).join('');
+  $('#manualMainButtons').onclick=e=>{if(!e.target.dataset.main)return;manualMain=e.target.dataset.main;manualSub=C[manualMain][0];renderManualChoices();updateCalcDisplay()};
+  $('#manualSubButtons').onclick=e=>{if(!e.target.dataset.sub)return;manualSub=e.target.dataset.sub;renderManualChoices();updateCalcDisplay()};
+}
+function updateCalcDisplay(){
+  $('#calcLabel').textContent=manualMain+' ＞ '+manualSub;
+  $('#calcExpression').textContent=manualExpression||'0';
+  $('#calcResult').textContent=(manualAmount||0).toLocaleString('ja-JP')+'円';
+}
+function calculateExpression(){
+  const safe=manualExpression.replace(/＋/g,'+').replace(/−/g,'-').replace(/×/g,'*').replace(/÷/g,'/');
+  if(!safe||!/^[0-9+*\/.-]+$/.test(safe))return 0;
+  try{const value=Function('return ('+safe+')')();return Number.isFinite(value)?Math.max(0,Math.round(value)):0}catch{return 0}
+}
+function handleCalcKey(key){
+  if(key==='C'){manualExpression='';manualAmount=0}
+  else if(key==='＝'){manualAmount=calculateExpression();if(!manualAmount)toast('金額を入力してください')}
+  else{const operator=/[＋−×÷]/.test(key);if(operator&&(!manualExpression||/[＋−×÷]$/.test(manualExpression)))return;manualExpression+=key;manualAmount=0}
+  updateCalcDisplay();
+}
+function addCustomSub(){
+  const value=$('#customSubInput').value.trim();if(!value)return toast('追加する項目名を入力してください');
+  if(!C[manualMain].includes(value))C[manualMain].push(value);
+  manualCustom[manualMain]=[...new Set([...(manualCustom[manualMain]||[]),value])];
+  localStorage.setItem('kakeibo-custom-subs-v1',JSON.stringify(manualCustom));
+  manualSub=value;$('#customSubInput').value='';renderManualChoices();updateCalcDisplay();toast('次回から選べる項目に追加しました');
+}
+function addCalculatedItem(){
+  const amount=manualAmount||calculateExpression();if(!amount)return toast('金額を入力して「＝ 合計」を押してください');
+  manualItems.push({id:uid(),name:manualSub,amount,main:manualMain,sub:manualSub});
+  manualExpression='';manualAmount=0;renderManualAdded();updateCalcDisplay();
+}
+function renderManualAdded(){
+  $('#manualAddedList').innerHTML=manualItems.map(i=>`<div class="manual-added-item"><span><b>${esc(i.main)} ＞ ${esc(i.sub)}</b><small>${yen(i.amount)}</small></span><button type="button" data-remove="${i.id}">×</button></div>`).join('');
+  $('#manualGrandTotal').textContent=yen(manualItems.reduce((s,i)=>s+i.amount,0));
+  $('#manualAddedList').onclick=e=>{if(!e.target.dataset.remove)return;manualItems=manualItems.filter(i=>i.id!==e.target.dataset.remove);renderManualAdded()};
+}
+function openManualEntry(){
+  ensureManualPanel();editing=null;items=[];manualItems=[];manualExpression='';manualAmount=0;manualMain='食費';manualSub=C[manualMain][0];
+  $('#memoInput').value='';$('#expenseDate').value=new Date().toISOString().slice(0,10);document.querySelector('[name=payment][value=cash]').checked=true;
+  $('#capturePanel').hidden=true;$('#reviewPanel').hidden=true;$('#manualPanel').hidden=false;$('#dialogTitle').textContent='かんたん手入力';$('#dialogStep').textContent='選択して入力';
+  renderManualChoices();renderManualAdded();updateCalcDisplay();$('#entryDialog').showModal();
+}
+function finishManualEntry(){
+  if(manualExpression&&(manualAmount||calculateExpression()))addCalculatedItem();
+  if(!manualItems.length)return toast('項目と金額を追加してください');
+  items=manualItems.map(i=>({...i}));$('#manualPanel').hidden=true;$('#reviewPanel').hidden=false;$('#dialogStep').textContent='最終確認';$('#dialogTitle').textContent='内容を確認';draft();
+}
+const normalOpenEntry=openEntry;
+$('#manualBtn').onclick=openManualEntry;
+$('#voiceBtn').onclick=()=>{ensureManualPanel();$('#manualPanel').hidden=true;normalOpenEntry('voice')};
+$('#cameraInput').onchange=e=>{if(e.target.files[0]){ensureManualPanel();$('#manualPanel').hidden=true;normalOpenEntry('camera',e.target.files[0])}e.target.value=''};
+$('#photoInput').onchange=e=>{if(e.target.files[0]){ensureManualPanel();$('#manualPanel').hidden=true;normalOpenEntry('photo',e.target.files[0])}e.target.value=''};
