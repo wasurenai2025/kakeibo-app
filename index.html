@@ -1,0 +1,242 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#45cdb0">
+<meta name="description" content="音声・手入力・レシート写真から、かんたんに記録できる家計簿">
+<title>かんたん家計簿</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23155eef'/%3E%3Cpath d='M17 18h30v30H17z' fill='white'/%3E%3Cpath d='M22 27h20M22 34h9M35 34h7M22 41h12' stroke='%23155eef' stroke-width='4' stroke-linecap='round'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="./styles.css">
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="apple-touch-icon" href="./app-icon.png">
+</head>
+<body>
+<div class="app-shell">
+<header class="topbar">
+<div>
+<p class="eyebrow">MY MONEY NOTE</p>
+<h1>かんたん家計簿</h1>
+</div>
+<button class="icon-button" id="helpBtn" aria-label="使い方">?</button>
+</header>
+<div class="town-scene" aria-hidden="true">
+<img src="./town-banner.png" alt="">
+</div>
+<main>
+<section class="view active" id="inputView" aria-labelledby="inputTab">
+<div class="month-card">
+<div>
+<span>今月の支出</span>
+<strong id="monthTotal">¥0</strong>
+</div>
+<div class="card-total">
+<span>カード</span>
+<strong id="monthCardTotal">¥0</strong>
+</div>
+</div>
+<div class="section-heading">
+<div>
+<p class="step-label">STEP 1</p>
+<h2>どうやって入力しますか？</h2>
+</div>
+</div>
+<div class="entry-grid">
+<button class="entry-button" id="voiceBtn">
+<span class="entry-icon">🎤</span>
+<span>
+<strong>音声で入力</strong>
+<small>話すだけで記録</small>
+</span>
+</button>
+<button class="entry-button" id="manualBtn">
+<span class="entry-icon orange">✏️</span>
+<span>
+<strong>手入力</strong>
+<small>文字でかんたん</small>
+</span>
+</button>
+<label class="entry-button" for="cameraInput">
+<span class="entry-icon green">📷</span>
+<span>
+<strong>レシート撮影</strong>
+<small>カメラを起動</small>
+</span>
+</label>
+<label class="entry-button" for="photoInput">
+<span class="entry-icon purple">🖼️</span>
+<span>
+<strong>写真から選ぶ</strong>
+<small>保存済みの画像</small>
+</span>
+</label>
+<input class="visually-hidden" id="cameraInput" type="file" accept="image/*" capture="environment">
+<input class="visually-hidden" id="photoInput" type="file" accept="image/*">
+</div>
+<article class="tip-card">
+<span>💡</span>
+<p>
+<strong>こんな言い方も計算できます</strong>「合計3500円、肉500円＋700円＋800円、残りは野菜」</p>
+</article>
+</section>
+<section class="view" id="historyView">
+<div class="section-heading">
+<div>
+<p class="step-label">RECORDS</p>
+<h2>履歴</h2>
+</div>
+<button class="text-button" id="deleteAllBtn">すべて削除</button>
+</div>
+<div class="filter-row">
+<label>
+<span>表示する月</span>
+<input type="month" id="historyMonth">
+</label>
+</div>
+<div class="backup-actions" aria-label="バックアップ">
+<button type="button" class="backup-button" id="exportCsvBtn"><span>⬇️</span><strong>CSVを書き出す</strong><small>Excelで開けるバックアップ</small></button>
+<label class="backup-button" for="importCsvInput"><span>⬆️</span><strong>CSVを読み込む</strong><small>以前の記録を復元</small></label>
+<input class="visually-hidden" type="file" id="importCsvInput" accept=".csv,text/csv">
+</div>
+<div id="historyList" class="history-list">
+</div>
+</section>
+<section class="view" id="summaryView">
+<div class="section-heading">
+<div>
+<p class="step-label">SUMMARY</p>
+<h2>集計</h2>
+</div>
+</div>
+<div class="filter-row">
+<label>
+<span>集計する月</span>
+<input type="month" id="summaryMonth">
+</label>
+</div>
+<div class="summary-hero">
+<span>合計</span>
+<strong id="summaryTotal">¥0</strong>
+<div class="payment-split">
+<span>現金 <b id="cashTotal">¥0</b>
+</span>
+<span>カード <b id="cardTotal">¥0</b>
+</span>
+<span>バーコード <b id="barcodeTotal">¥0</b>
+</span>
+</div>
+</div>
+<section class="comparison-card" aria-labelledby="comparisonTitle">
+<div class="comparison-heading"><h3 id="comparisonTitle">直近6か月の比較</h3><span>月別合計</span></div>
+<div id="monthChart" class="month-chart"></div>
+</section>
+<div id="categorySummary" class="category-summary">
+</div>
+</section>
+</main>
+<nav class="bottom-nav">
+<button class="nav-item active" data-view="inputView">
+<span>＋</span>入力</button>
+<button class="nav-item" data-view="historyView">
+<span>☷</span>履歴</button>
+<button class="nav-item" data-view="summaryView">
+<span>▥</span>集計</button>
+</nav>
+</div>
+<dialog id="entryDialog" class="sheet-dialog">
+<form method="dialog" class="sheet">
+<div class="sheet-handle">
+</div>
+<div class="sheet-header">
+<div>
+<p class="step-label" id="dialogStep">STEP 1</p>
+<h2 id="dialogTitle">支出を入力</h2>
+</div>
+<button class="icon-button" value="cancel" aria-label="閉じる">×</button>
+</div>
+<div id="capturePanel">
+<div class="listening" id="listeningState" hidden>
+<span class="pulse">🎤</span>
+<strong>聞いています…</strong>
+<small>終わったら「停止」を押してください</small>
+</div>
+<div id="receiptPreview" class="receipt-preview" hidden>
+<img id="receiptImage" alt="選択したレシート">
+<p id="ocrStatus">
+</p>
+</div>
+<label class="input-label" for="rawInput">内容を入力</label>
+<textarea id="rawInput" rows="5" placeholder="例：合計3500円、肉500円＋700円＋800円、残りは野菜">
+</textarea>
+<p class="field-help">1品ずつなら「キャベツ 198円、洗剤 298円」のように入力できます。</p>
+<div class="dialog-actions">
+<button type="button" class="secondary-button" id="stopVoiceBtn" hidden>音声を停止</button>
+<button type="button" class="primary-button" id="parseBtn">内容を確認する</button>
+</div>
+</div>
+<div id="reviewPanel" hidden>
+<div class="review-meta">
+<label>
+<span>日付（空欄でも保存できます）</span>
+<input type="date" id="expenseDate">
+</label>
+<fieldset>
+<legend>支払い方法</legend>
+<div class="segmented">
+<label>
+<input type="radio" name="payment" value="cash" checked>
+<span>現金</span>
+</label>
+<label>
+<input type="radio" name="payment" value="card">
+<span>カード</span>
+</label>
+<label>
+<input type="radio" name="payment" value="barcode">
+<span>バーコード</span>
+</label>
+</div>
+</fieldset>
+</div>
+<div class="review-title">
+<h3>内訳</h3>
+<button type="button" class="text-button" id="addItemBtn">＋ 品目を追加</button>
+</div>
+<div id="itemList" class="item-list">
+</div>
+<div class="review-total">
+<span>合計</span>
+<strong id="reviewTotal">¥0</strong>
+</div>
+<label class="input-label" for="memoInput">メモ（任意）</label>
+<input type="text" id="memoInput" placeholder="例：スーパーでまとめ買い">
+<p class="save-note">この端末内に保存します。API料金はかかりません。</p>
+<div class="dialog-actions sticky-actions">
+<button type="button" class="secondary-button" id="backBtn">入力に戻る</button>
+<button type="button" class="primary-button" id="saveBtn">この内容で保存</button>
+</div>
+</div>
+</form>
+</dialog>
+<dialog id="helpDialog" class="message-dialog">
+<form method="dialog">
+<h2>使い方</h2>
+<ol>
+<li>入力方法を選びます</li>
+<li>読み取り結果を確認・修正します</li>
+<li>支払い方法を選んで保存します</li>
+<li>「履歴」からいつでも編集できます</li>
+</ol>
+<p>音声・画像の文字認識は、お使いのブラウザが対応している場合に端末側の機能を使います。</p>
+<h3>スマホに追加する</h3>
+<p>iPhoneは共有ボタンから「ホーム画面に追加」、Androidはブラウザのメニューから「アプリをインストール」を選びます。</p>
+<button type="button" class="secondary-button install-button" id="installAppBtn" hidden>ホーム画面に追加</button>
+<button class="primary-button" value="close">わかりました</button>
+</form>
+</dialog>
+<div class="toast" id="toast" role="status">
+</div>
+<script src="./app.js">
+</script>
+</body>
+</html>
