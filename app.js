@@ -150,6 +150,41 @@ function exportCsv(){
   toast('CSVを書き出しました');
 }
 
+async function exportExcel(){
+  if(!window.ExcelJS){toast('Excel機能を読み込めませんでした。通信状況を確認してください');return}
+  const selectedMonth=$('#historyMonth').value||month(),monthRecords=filtered(selectedMonth);
+  if(!monthRecords.length){toast('選択した月に書き出す記録がありません');return}
+  const paymentName={cash:'現金',card:'カード',barcode:'バーコード'},flatRows=[];
+  monthRecords.forEach(record=>record.items.forEach(item=>flatRows.push({date:record.date||'日付不明',main:item.main||'その他',sub:item.sub||'その他',name:item.name||'支出',payment:paymentName[record.payment]||'現金',amount:+item.amount||0,memo:record.memo||''})));
+  flatRows.sort((a,b)=>a.date.localeCompare(b.date));
+  const totalAmount=flatRows.reduce((sum,row)=>sum+row.amount,0),paymentTotals={cash:0,card:0,barcode:0};
+  monthRecords.forEach(record=>{paymentTotals[record.payment]=(paymentTotals[record.payment]||0)+total(record)});
+  const workbook=new ExcelJS.Workbook();
+  workbook.creator='かんたん家計簿';workbook.created=new Date();
+  const sheet=workbook.addWorksheet('今月の家計簿',{views:[{state:'frozen',ySplit:8}]});
+  sheet.mergeCells('A1:G1');sheet.getCell('A1').value=selectedMonth.replace('-','年')+'月 家計簿';
+  sheet.getCell('A1').font={name:'Yu Gothic',size:18,bold:true,color:{argb:'FF123456'}};sheet.getCell('A1').alignment={vertical:'middle',horizontal:'left'};sheet.getRow(1).height=34;
+  sheet.getCell('A3').value='対象月';sheet.getCell('B3').value=selectedMonth;
+  sheet.getCell('A4').value='合計';sheet.getCell('B4').value=totalAmount;
+  sheet.getCell('D3').value='現金';sheet.getCell('E3').value=paymentTotals.cash||0;
+  sheet.getCell('D4').value='カード';sheet.getCell('E4').value=paymentTotals.card||0;
+  sheet.getCell('D5').value='バーコード';sheet.getCell('E5').value=paymentTotals.barcode||0;
+  ['A3','A4','D3','D4','D5'].forEach(address=>{sheet.getCell(address).font={name:'Yu Gothic',bold:true,color:{argb:'FF245B66'}}});
+  ['B4','E3','E4','E5'].forEach(address=>{sheet.getCell(address).numFmt='#,##0"円"';sheet.getCell(address).font={name:'Yu Gothic',bold:true}});
+  sheet.getRow(8).values=['日付','大分類','内訳','品名','支払い方法','金額','メモ'];
+  const headerRow=sheet.getRow(8);headerRow.height=26;
+  headerRow.eachCell(cell=>{cell.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FF38BFA7'}};cell.font={name:'Yu Gothic',bold:true,color:{argb:'FFFFFFFF'}};cell.alignment={vertical:'middle',horizontal:'center'};cell.border={bottom:{style:'thin',color:{argb:'FFB7DED8'}}}});
+  flatRows.forEach((row,index)=>{const excelRow=sheet.addRow([row.date,row.main,row.sub,row.name,row.payment,row.amount,row.memo]);excelRow.font={name:'Yu Gothic',size:11,color:{argb:'FF24364B'}};excelRow.height=22;excelRow.getCell(6).numFmt='#,##0"円"';excelRow.getCell(6).alignment={horizontal:'right'};if(index%2===1)excelRow.eachCell(cell=>cell.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FFF0FBF9'}})});
+  sheet.columns=[{width:14},{width:15},{width:18},{width:24},{width:15},{width:14},{width:28}];sheet.autoFilter={from:'A8',to:'G'+(8+flatRows.length)};
+  const summarySheet=workbook.addWorksheet('分類別集計',{views:[{state:'frozen',ySplit:3}]});
+  summarySheet.mergeCells('A1:C1');summarySheet.getCell('A1').value=selectedMonth.replace('-','年')+'月 分類別集計';summarySheet.getCell('A1').font={name:'Yu Gothic',size:18,bold:true,color:{argb:'FF123456'}};summarySheet.getRow(1).height=34;
+  summarySheet.getRow(3).values=['大分類','内訳','金額'];summarySheet.getRow(3).eachCell(cell=>{cell.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FF72CFE8'}};cell.font={name:'Yu Gothic',bold:true,color:{argb:'FFFFFFFF'}};cell.alignment={horizontal:'center'}});
+  const grouped=new Map();flatRows.forEach(row=>{const key=row.main+'|'+row.sub;grouped.set(key,(grouped.get(key)||0)+row.amount)});
+  [...grouped.entries()].sort((a,b)=>b[1]-a[1]).forEach(([key,amount],index)=>{const splitAt=key.indexOf('|'),main=key.slice(0,splitAt),sub=key.slice(splitAt+1),excelRow=summarySheet.addRow([main,sub,amount]);excelRow.font={name:'Yu Gothic',size:11,color:{argb:'FF24364B'}};excelRow.getCell(3).numFmt='#,##0"円"';if(index%2===1)excelRow.eachCell(cell=>cell.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FFF2FAFD'}})});
+  const summaryTotalRow=summarySheet.addRow(['合計','',totalAmount]);summaryTotalRow.font={name:'Yu Gothic',bold:true,color:{argb:'FF123456'}};summaryTotalRow.getCell(3).numFmt='#,##0"円"';summarySheet.columns=[{width:18},{width:24},{width:16}];
+  try{const buffer=await workbook.xlsx.writeBuffer(),blob=new Blob([buffer],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}),url=URL.createObjectURL(blob),link=document.createElement('a');link.href=url;link.download='家計簿-'+selectedMonth+'.xlsx';document.body.appendChild(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);toast('Excelファイルを保存しました')}catch{toast('Excelファイルを作成できませんでした')}
+}
+
 function parseCsv(text){
   const rows=[];
   let row=[],field='',quoted=false;
@@ -244,6 +279,7 @@ save()}};
 $('#historyMonth').onchange=histories;
 $('#summaryMonth').onchange=summary;
 $('#helpBtn').onclick=()=>$('#helpDialog').showModal();
+$('#exportExcelBtn').onclick=exportExcel;
 $('#exportCsvBtn').onclick=exportCsv;
 $('#importCsvInput').onchange=e=>{if(e.target.files[0])importCsv(e.target.files[0]);e.target.value=''};
 $('#entryDialog').addEventListener('close',stop);
