@@ -94,7 +94,8 @@
 </label>
 </div>
 <div class="backup-actions" aria-label="バックアップ">
-<button type="button" class="backup-button" id="exportCsvBtn"><span>⬇️</span><strong>CSVを書き出す</strong><small>Excelで開けるバックアップ</small></button>
+<button type="button" class="backup-button" id="exportExcelBtn"><span>📗</span><strong>Excelで保存</strong><small>選択中の月を見やすい表に</small></button>
+<button type="button" class="backup-button" id="exportCsvBtn"><span>⬇️</span><strong>CSVを書き出す</strong><small>復元用の軽いバックアップ</small></button>
 <label class="backup-button" for="importCsvInput"><span>⬆️</span><strong>CSVを読み込む</strong><small>以前の記録を復元</small></label>
 <input class="visually-hidden" type="file" id="importCsvInput" accept=".csv,text/csv">
 </div>
@@ -236,7 +237,8 @@
 </dialog>
 <div class="toast" id="toast" role="status">
 </div>
-<script src="./app.js?v=20261005-1">
+<script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
+<script src="./app.js?v=20261005-2">
 </script>
 </body>
 </html>
