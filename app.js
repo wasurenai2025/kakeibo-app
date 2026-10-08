@@ -1,6 +1,6 @@
-const C={'食費':['野菜','肉','フルーツ','調味料','お菓子','飲料','外食','その他'],'日用品':['コンタクト','洗剤','キッチン消耗品','衛生用品','その他'],'娯楽費':['Netflix','Kindle','映画','ゲーム','本','その他'],'交通費':['電車','バス','タクシー','ガソリン','その他'],'医療費':['病院','薬','その他'],'その他':['その他']};
+const C={'食費':['野菜','肉','魚','フルーツ','調味料','お菓子','飲料','外食','その他'],'日用品':['コンタクト','洗剤','キッチン消耗品','衛生用品','その他'],'娯楽費':['Netflix','Kindle','映画','ゲーム','本','その他'],'交通費':['電車','バス','タクシー','ガソリン','その他'],'医療費':['病院','薬','その他'],'その他':['その他']};
 
-const RULES=[['野菜',/野菜|キャベツ|白菜|トマト|玉ねぎ|人参|小松菜|レタス|きゅうり|大根/],['肉',/肉|豚|牛|鶏|ひき肉|ハム|ベーコン/],['フルーツ',/果物|フルーツ|りんご|バナナ|みかん|いちご|ぶどう/],['調味料',/調味料|醤油|味噌|砂糖|塩|酢|みりん|ケチャップ/],['お菓子',/菓子|チョコ|クッキー|アイス|せんべい|スナック/],['飲料',/水|お茶|コーヒー|ジュース|牛乳|酒|ビール/],['コンタクト',/コンタクト|レンズ/],['洗剤',/洗剤|アタック|トップ|漂白|柔軟剤/],['キッチン消耗品',/ラップ|アルミホイル|キッチンペーパー|スポンジ|ごみ袋/],['衛生用品',/ティッシュ|トイレットペーパー|歯磨き|シャンプー|石鹸|マスク/],['Netflix',/netflix|ネットフリックス/i],['Kindle',/kindle|キンドル/i],['映画',/映画|シネマ/],['ゲーム',/ゲーム|switch|playstation/i],['本',/本|書籍|雑誌/],['電車',/電車|鉄道|suica|pasmo/i],['バス',/バス/],['タクシー',/タクシー/],['ガソリン',/ガソリン|給油/],['病院',/病院|診療|クリニック/],['薬',/薬|ドラッグ/]];
+const RULES=[['野菜',/野菜|キャベツ|白菜|トマト|玉ねぎ|玉葱|じゃがいも|ジャガイモ|人参|小松菜|レタス|きゅうり|大根/],['肉',/肉|豚|牛|鶏|ひき肉|ハム|ベーコン/],['魚',/魚|鮭|サケ|さけ|まぐろ|マグロ|ツナ|さば|サバ|あじ|アジ|ぶり|ブリ|えび|エビ|いか|イカ|たこ|タコ|しらす|刺身/],['フルーツ',/果物|フルーツ|りんご|バナナ|みかん|いちご|ぶどう/],['調味料',/調味料|醤油|味噌|砂糖|塩|酢|みりん|ケチャップ/],['お菓子',/菓子|チョコ|クッキー|アイス|せんべい|スナック/],['飲料',/水|お茶|コーヒー|ジュース|牛乳|酒|ビール/],['コンタクト',/コンタクト|レンズ/],['洗剤',/洗剤|アタック|トップ|漂白|柔軟剤/],['キッチン消耗品',/ラップ|アルミホイル|キッチンペーパー|スポンジ|ごみ袋/],['衛生用品',/ティッシュ|トイレットペーパー|歯磨き|シャンプー|石鹸|マスク/],['Netflix',/netflix|ネットフリックス/i],['Kindle',/kindle|キンドル/i],['映画',/映画|シネマ/],['ゲーム',/ゲーム|switch|playstation/i],['本',/本|書籍|雑誌/],['電車',/電車|鉄道|suica|pasmo/i],['バス',/バス/],['タクシー',/タクシー/],['ガソリン',/ガソリン|給油/],['病院',/病院|診療|クリニック/],['薬',/薬|ドラッグ/]];
 
 const S=Object.fromEntries(Object.entries(C).flatMap(([m,ss])=>ss.map(s=>[s,m]))),$=s=>document.querySelector(s),yen=n=>`¥${Math.round(+n||0).toLocaleString('ja-JP')}`,month=()=>new Date().toISOString().slice(0,7),uid=()=>crypto.randomUUID?.()||Date.now()+'-'+Math.random();
 
@@ -13,18 +13,31 @@ e.textContent=m;
 e.classList.add('show');
 clearTimeout(toast.t);
 toast.t=setTimeout(()=>e.classList.remove('show'),2200)}
-function classify(n){let f=RULES.find(([,r])=>r.test(n)),sub=f?.[0]||'その他';
+const CATEGORY_ALIASES={'果物':'フルーツ','魚・魚介':'魚','魚介':'魚'};
+function classify(n,hint=''){let hinted=CATEGORY_ALIASES[hint]||hint;
+if(hinted&&S[hinted])return{main:S[hinted],sub:hinted};
+let f=RULES.find(([,r])=>r.test(n)),sub=f?.[0]||'その他';
 return{main:S[sub]||'その他',sub}}
-function num(v){return +String(v).replace(/[，,]/g,'').replace(/[０-９]/g,d=>'０１２３４５６７８９'.indexOf(d))||0}
-function parse(t){let x=t.replace(/＋/g,'+').replace(/，/g,',').replace(/￥/g,'円').trim(),tm=x.match(/(?:合計|全部で|計)\s*([\d,０-９]+)\s*円?/),total=tm?num(tm[1]):0,rm=x.match(/残り(?:は|を)?\s*([^、,。\s]+)/),out=[];
+function normalizeDigits(v){return String(v).replace(/[０-９]/g,d=>'０１２３４５６７８９'.indexOf(d))}
+function num(v){return +normalizeDigits(v).replace(/[，,]/g,'')||0}
+function extractSpokenDate(text){let normalized=normalizeDigits(text),m=normalized.match(/(?:(\d{4})年)?\s*(\d{1,2})月\s*(\d{1,2})日/);
+if(!m)return null;
+let year=+(m[1]||new Date().getFullYear()),mon=+m[2],day=+m[3],date=new Date(year,mon-1,day);
+if(date.getFullYear()!==year||date.getMonth()!==mon-1||date.getDate()!==day)return null;
+return{raw:m[0],value:year+'-'+String(mon).padStart(2,'0')+'-'+String(day).padStart(2,'0'),label:mon+'月'+day+'日'}}
+function parse(t){let x=normalizeDigits(t).replace(/＋/g,'+').replace(/，/g,',').replace(/￥/g,'円').trim(),spokenDate=extractSpokenDate(x),out=[];
+if(spokenDate){$('#expenseDate').value=spokenDate.value;x=x.replace(spokenDate.raw,' ')}
+let tm=x.match(/(?:合計|全部で|計)\s*([\d,]+)\s*円?/),total=tm?num(tm[1]):0,rm=x.match(/残り(?:は|を)?\s*([^、,。\s]+)/);
+const hintPattern='野菜|肉|魚・魚介|魚介|魚|フルーツ|果物|調味料|お菓子|飲料|外食|洗剤|キッチン消耗品|衛生用品|コンタクト|電車|バス|タクシー|ガソリン|病院|薬';
+x=x.replace(new RegExp('([^、,。\\n]+?)[、,]\\s*(?:分類は|カテゴリーは)?\\s*('+hintPattern+')[、,]\\s*([\\d,]+)\\s*円?','g'),(all,name,hint,amount)=>{let cleanName=name.trim();out.push({id:uid(),name:cleanName,amount:num(amount),...classify(cleanName,hint)});return '\n'});
+x=x.replace(/円\s*(?=[^＋+、,。\n])/g,'円\n');
 x.split(/[、,。\n]/).map(s=>s.trim()).filter(Boolean).forEach(seg=>{if(/^(合計|全部で|計)/.test(seg)||/残り(?:は|を)?/.test(seg))return;
-let name=(seg.match(/^(.+?)(?=\s*[\d０-９])/)||[])[1]?.trim().replace(/[はが:]$/,'')||'',ns=[...seg.matchAll(/([\d,０-９]+)\s*円?/g)].map(a=>num(a[1]));
+let name=(seg.match(/^(.+?)(?=\s*[\d])/)||[])[1]?.trim().replace(/[はが:]$/,'')||'',ns=[...seg.matchAll(/([\d,]+)\s*円?/g)].map(a=>num(a[1]));
 if(!ns.length)return;
 if(ns.length>1&&name)ns.forEach((amount,i)=>out.push({id:uid(),name:name+(i+1),amount,...classify(name)}));
-else{let n=name||seg.replace(/[\d,０-９+円\s]/g,'')||'支出';
-out.push({id:uid(),name:n,amount:ns[0],...classify(n)})}});
-if(rm&&total){let amount=Math.max(0,total-out.reduce((s,i)=>s+i.amount,0)),n=rm[1].replace(/円.*/,'');
-if(amount)out.push({id:uid(),name:n,amount,...classify(n)})}if(!out.length&&total)out.push({id:uid(),name:'支出',amount:total,main:'その他',sub:'その他'});
+else{let n=name||seg.replace(/[\d,+円\s]/g,'')||'支出';out.push({id:uid(),name:n,amount:ns[0],...classify(n)})}});
+if(rm&&total){let amount=Math.max(0,total-out.reduce((s,i)=>s+i.amount,0)),n=rm[1].replace(/円.*/,'');if(amount)out.push({id:uid(),name:n,amount,...classify(n)})}
+if(!out.length&&total)out.push({id:uid(),name:'支出',amount:total,main:'その他',sub:'その他'});
 return out}
 function openEntry(mode,file){editing=null;
 items=[];
@@ -44,22 +57,18 @@ if(mode==='voice')voice();
 else if(file)receipt(file);
 else setTimeout(()=>$('#rawInput').focus(),100)}
 function voice(){let R=window.SpeechRecognition||window.webkitSpeechRecognition;
-if(!R){toast('このブラウザは音声入力に未対応です');
-return}rec=new R;
-rec.lang='ja-JP';
-rec.continuous=true;
-rec.interimResults=true;
-let f='';
-$('#listeningState').hidden=false;
-$('#stopVoiceBtn').hidden=false;
-rec.onresult=e=>{let z='';
-for(let i=e.resultIndex;
-i<e.results.length;
-i++)e.results[i].isFinal?f+=e.results[i][0].transcript:z+=e.results[i][0].transcript;
-$('#rawInput').value=f+z};
+if(!R){toast('このブラウザは音声入力に未対応です');return}
+rec=new R;rec.lang='ja-JP';rec.continuous=true;rec.interimResults=true;
+let finalText='';
+$('#listeningState').hidden=false;$('#stopVoiceBtn').hidden=false;
+rec.onresult=e=>{let interim='';
+for(let i=e.resultIndex;i<e.results.length;i++){let spoken=e.results[i][0].transcript;
+if(e.results[i].isFinal){let spokenDate=extractSpokenDate(spoken);
+if(spokenDate){$('#expenseDate').value=spokenDate.value;spoken=spoken.replace(spokenDate.raw,'');toast(spokenDate.label+'の日付で続けて入力します')}
+spoken=spoken.trim();if(spoken)finalText+=(finalText?'\n':'')+spoken}else interim+=spoken}
+$('#rawInput').value=finalText+(interim?(finalText?'\n':'')+interim:'')};
 rec.onerror=()=>toast('聞き取れませんでした。文字でも入力できます');
-rec.onend=()=>{$('#listeningState').hidden=true;
-$('#stopVoiceBtn').hidden=true};
+rec.onend=()=>{$('#listeningState').hidden=true;$('#stopVoiceBtn').hidden=true};
 rec.start()}
 function stop(){try{rec?.stop()}catch{}}
 async function receipt(file){$('#receiptImage').src=URL.createObjectURL(file);
@@ -319,7 +328,7 @@ return{saved:true,id:r.id,total:x.amount}}}).catch?.(()=>{});
 
 // ボタン選択＋電卓式の手入力
 const MANUAL_DEFAULTS={
-  '食費':['野菜','肉','フルーツ','調味料','お菓子','飲料','外食','その他'],
+  '食費':['野菜','肉','魚','フルーツ','調味料','お菓子','飲料','外食','その他'],
   '日用品':['洗剤','清掃用品','キッチン消耗品','衛生用品','コンタクト','その他'],
   '電気':['電気料金'],'ガス':['ガス料金'],'水道':['水道料金'],
   '娯楽費':['Netflix','U-NEXT','Amazonプライム','映画','ゲーム','本','その他'],
@@ -420,3 +429,4 @@ $('#manualBtn').onclick=openManualEntry;
 $('#voiceBtn').onclick=()=>{ensureManualPanel();$('#manualPanel').hidden=true;normalOpenEntry('voice')};
 $('#cameraInput').onchange=e=>{if(e.target.files[0]){ensureManualPanel();$('#manualPanel').hidden=true;normalOpenEntry('camera',e.target.files[0])}e.target.value=''};
 $('#photoInput').onchange=e=>{if(e.target.files[0]){ensureManualPanel();$('#manualPanel').hidden=true;normalOpenEntry('photo',e.target.files[0])}e.target.value=''};
+
