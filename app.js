@@ -13,6 +13,14 @@ e.textContent=m;
 e.classList.add('show');
 clearTimeout(toast.t);
 toast.t=setTimeout(()=>e.classList.remove('show'),2200)}
+const CATEGORY_ICONS={
+  '食費':'🍽️','日用品':'🧴','娯楽費':'🎬','交通費':'🚃','医療費':'🏥','電気':'💡','ガス':'🔥','水道':'💧','趣味・学習':'📚','税金・社会保険':'🧾','公共料金・放送':'📺','その他':'✨',
+  '野菜':'🥬','肉':'🥩','魚':'🐟','フルーツ':'🍎','果物':'🍎','調味料':'🧂','お菓子':'🍪','飲料':'🥤','外食':'🍽️',
+  'コンタクト':'👁️','洗剤':'🧴','清掃用品':'🧹','キッチン消耗品':'🧻','衛生用品':'🫧',
+  'Netflix':'📺','U-NEXT':'📺','Amazonプライム':'📺','映画':'🎞️','ゲーム':'🎮','本':'📖','ChatGPT':'💬','電子書籍':'📱','オンライン講座':'🎓',
+  '電車':'🚃','バス':'🚌','タクシー':'🚕','ガソリン':'⛽','病院':'🏥','薬':'💊','NHK':'📺'
+};
+const categoryIcon=(main,sub)=>CATEGORY_ICONS[sub]||CATEGORY_ICONS[main]||'✨';
 const CATEGORY_ALIASES={'果物':'フルーツ','魚・魚介':'魚','魚介':'魚'};
 function classify(n,hint=''){let hinted=CATEGORY_ALIASES[hint]||hint;
 if(hinted&&S[hinted])return{main:S[hinted],sub:hinted};
@@ -111,7 +119,7 @@ document.querySelector(`[name=payment][value=${r.payment}]`).checked=true;
 draft()}
 function histories(){let a=filtered($('#historyMonth').value);
 let paymentName={cash:'現金',card:'カード',barcode:'バーコード'};
-$('#historyList').innerHTML=a.length?a.map(r=>`<article class="history-card"><header><div><h3>${esc(r.memo||r.items.map(i=>i.name).slice(0,2).join('・')||'支出')}</h3><p class="meta">${r.date||'日付不明'} ・ ${paymentName[r.payment]||'現金'}</p></div><span class="amount">${yen(total(r))}</span></header><div class="chips">${r.items.slice(0,4).map(i=>`<span class="chip">${esc(i.sub)} ${yen(i.amount)}</span>`).join('')}</div><div class="history-actions"><button data-edit="${r.id}">編集</button><button class="delete" data-delete="${r.id}">削除</button></div></article>`).join(''):'<div class="empty-state"><span>🧾</span>まだ記録がありません<br>「入力」から保存できます</div>'}
+$('#historyList').innerHTML=a.length?a.map(r=>`<article class="history-card"><header><div><h3>${esc(r.memo||r.items.map(i=>i.name).slice(0,2).join('・')||'支出')}</h3><p class="meta">${r.date||'日付不明'} ・ ${paymentName[r.payment]||'現金'}</p></div><span class="amount">${yen(total(r))}</span></header><div class="chips">${r.items.slice(0,4).map(i=>`<span class="chip"><b aria-hidden="true">${categoryIcon(i.main,i.sub)}</b>${esc(i.sub)} ${yen(i.amount)}</span>`).join('')}</div><div class="history-actions"><button data-edit="${r.id}">編集</button><button class="delete" data-delete="${r.id}">削除</button></div></article>`).join(''):'<div class="empty-state"><span>🧾</span>まだ記録がありません<br>「入力」から保存できます</div>'}
 function summary(){let a=filtered($('#summaryMonth').value),t=a.reduce((s,r)=>s+total(r),0),card=a.filter(r=>r.payment==='card').reduce((s,r)=>s+total(r),0),barcode=a.filter(r=>r.payment==='barcode').reduce((s,r)=>s+total(r),0),g={};
 $('#summaryTotal').textContent=yen(t);
 $('#cardTotal').textContent=yen(card);
@@ -120,7 +128,7 @@ $('#cashTotal').textContent=yen(t-card-barcode);
 a.flatMap(r=>r.items).forEach(i=>{g[i.main]??={total:0,subs:{}};
 g[i.main].total+=+i.amount;
 g[i.main].subs[i.sub]=(g[i.main].subs[i.sub]||0)+ +i.amount});
-$('#categorySummary').innerHTML=Object.entries(g).sort((a,b)=>b[1].total-a[1].total).map(([m,v])=>`<article class="category-card"><header><span>${m}</span><span>${yen(v.total)}</span></header><div class="bar"><i style="width:${t?v.total/t*100:0}%"></i></div><ul>${Object.entries(v.subs).map(([s,n])=>`<li><span>${s}</span><span>${yen(n)}</span></li>`).join('')}</ul></article>`).join('')||'<div class="empty-state"><span>📊</span>保存すると分類別の集計が表示されます</div>';
+$('#categorySummary').innerHTML=Object.entries(g).sort((a,b)=>b[1].total-a[1].total).map(([m,v])=>`<article class="category-card"><header><span class="category-heading"><b class="category-illustration small" aria-hidden="true">${categoryIcon(m,'')}</b>${m}</span><span>${yen(v.total)}</span></header><div class="bar"><i style="width:${t?v.total/t*100:0}%"></i></div><ul>${Object.entries(v.subs).map(([s,n])=>`<li><span class="sub-label"><b class="mini-icon" aria-hidden="true">${categoryIcon(m,s)}</b>${s}</span><span>${yen(n)}</span></li>`).join('')}</ul></article>`).join('')||'<div class="empty-state"><span>📊</span>保存すると分類別の集計が表示されます</div>';
 renderComparison()}
 
 function renderComparison(){
@@ -260,10 +268,10 @@ $('#monthTotal').textContent=yen(t);
 $('#monthCardTotal').textContent=yen(card);
 histories();
 summary()}
-document.querySelectorAll('.nav-item').forEach(b=>b.onclick=()=>{document.querySelectorAll('.nav-item,.view').forEach(x=>x.classList.remove('active'));
-b.classList.add('active');
-$('#'+b.dataset.view).classList.add('active');
-render()});
+function showView(viewId){document.querySelectorAll('.view').forEach(x=>x.classList.toggle('active',x.id===viewId));
+document.querySelectorAll('[data-view]').forEach(x=>x.classList.toggle('active',x.dataset.view===viewId));
+window.scrollTo({top:0,behavior:'smooth'});render()}
+document.querySelectorAll('[data-view]').forEach(b=>b.onclick=()=>showView(b.dataset.view));
 $('#manualBtn').onclick=()=>openEntry('manual');
 $('#voiceBtn').onclick=()=>openEntry('voice');
 $('#cameraInput').onchange=e=>{if(e.target.files[0])openEntry('camera',e.target.files[0]);
@@ -375,8 +383,8 @@ function ensureManualPanel(){
   $('#manualReviewBtn').onclick=finishManualEntry;
 }
 function renderManualChoices(){
-  $('#manualMainButtons').innerHTML=Object.keys(C).map(x=>`<button type="button" data-main="${esc(x)}" class="${x===manualMain?'selected':''}">${esc(x)}</button>`).join('');
-  $('#manualSubButtons').innerHTML=(C[manualMain]||['その他']).map(x=>`<button type="button" data-sub="${esc(x)}" class="${x===manualSub?'selected':''}">${esc(x)}</button>`).join('');
+  $('#manualMainButtons').innerHTML=Object.keys(C).map(x=>`<button type="button" data-main="${esc(x)}" class="${x===manualMain?'selected':''}">${categoryIcon(x,'')} ${esc(x)}</button>`).join('');
+  $('#manualSubButtons').innerHTML=(C[manualMain]||['その他']).map(x=>`<button type="button" data-sub="${esc(x)}" class="${x===manualSub?'selected':''}">${categoryIcon(manualMain,x)} ${esc(x)}</button>`).join('');
   $('#manualMainButtons').onclick=e=>{if(!e.target.dataset.main)return;manualMain=e.target.dataset.main;manualSub=C[manualMain][0];renderManualChoices();updateCalcDisplay()};
   $('#manualSubButtons').onclick=e=>{if(!e.target.dataset.sub)return;manualSub=e.target.dataset.sub;renderManualChoices();updateCalcDisplay()};
 }
@@ -429,4 +437,5 @@ $('#manualBtn').onclick=openManualEntry;
 $('#voiceBtn').onclick=()=>{ensureManualPanel();$('#manualPanel').hidden=true;normalOpenEntry('voice')};
 $('#cameraInput').onchange=e=>{if(e.target.files[0]){ensureManualPanel();$('#manualPanel').hidden=true;normalOpenEntry('camera',e.target.files[0])}e.target.value=''};
 $('#photoInput').onchange=e=>{if(e.target.files[0]){ensureManualPanel();$('#manualPanel').hidden=true;normalOpenEntry('photo',e.target.files[0])}e.target.value=''};
+
 
