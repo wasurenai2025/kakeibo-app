@@ -222,3 +222,26 @@ body{background:linear-gradient(180deg,#e8f8f7 0%,#edf7fd 100%)}
   .item-category{margin-left:46px}
 }
 
+/* 確認画面：大きな文字でも読める縦型カード */
+.item-card-head{display:grid;grid-template-columns:44px minmax(0,1fr) 48px;gap:10px;align-items:end}
+.item-card-head .category-illustration{align-self:center}
+.item-card-head label,.item-fields label{display:block;min-width:0}
+.item-card-head label>span,.item-fields label>span:first-child{display:block;margin:0 0 6px;color:var(--muted);font-size:.78rem;font-weight:800}
+.item-card-head input,.item-fields input,.item-fields select{min-height:54px;font-size:1.05rem;padding:12px 13px}
+.item-name-field input{font-weight:800}
+.item-card-head .remove-item{width:48px;height:54px;font-size:1.35rem;align-self:end}
+.item-fields{display:grid;grid-template-columns:1fr;gap:12px;margin-top:14px;padding-top:14px;border-top:1px solid var(--line)}
+.amount-input{display:grid!important;grid-template-columns:minmax(0,1fr) 44px;align-items:center;border:1px solid var(--line);border-radius:12px;background:#fff;overflow:hidden}
+.amount-input input{border:0!important;border-radius:0!important;text-align:right;font-size:1.2rem;font-weight:850}
+.amount-input b{display:grid;place-items:center;height:100%;background:#f2faf9;color:var(--mint-dark)}
+.item-category{margin-left:0}
+@media(min-width:480px){
+  .item-fields{grid-template-columns:1fr 1fr}
+  .item-amount-field{grid-column:1/-1}
+}
+@media(max-width:370px){
+  .item-card-head{grid-template-columns:40px minmax(0,1fr) 46px;gap:8px}
+  .item-card-head .category-illustration{width:40px;height:40px}
+  .item-card-head .remove-item{width:46px}
+}
+
