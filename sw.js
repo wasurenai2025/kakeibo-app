@@ -1,4 +1,4 @@
-const CACHE_NAME = 'kantan-kakeibo-v6';
+const CACHE_NAME = 'kantan-kakeibo-v7';
 const ASSETS = ['./','./index.html','./styles.css','./app.js','./manifest.webmanifest','./app-icon.png','./town-banner.png'];
 
 self.addEventListener('install', event => {
