@@ -223,6 +223,7 @@ body{background:linear-gradient(180deg,#e8f8f7 0%,#edf7fd 100%)}
 }
 
 /* 確認画面：大きな文字でも読める縦型カード */
+.sheet-dialog{overflow:hidden}
 .sheet{overflow-y:auto;overflow-x:hidden}
 .item-row{min-width:0;max-width:100%}
 .item-card-head{display:grid;grid-template-columns:44px minmax(0,1fr) 48px;gap:10px;align-items:end}
