@@ -1,4 +1,4 @@
-const CACHE_NAME = 'kantan-kakeibo-v4';
+const CACHE_NAME = 'kantan-kakeibo-v5';
 const ASSETS = ['./','./index.html','./styles.css','./app.js','./manifest.webmanifest','./app-icon.png','./town-banner.png'];
 
 self.addEventListener('install', event => {
@@ -23,3 +23,4 @@ self.addEventListener('fetch', event => {
     }).catch(() => event.request.mode === 'navigate' ? caches.match('./index.html') : undefined))
   );
 });
+
