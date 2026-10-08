@@ -87,7 +87,19 @@ $('#rawInput').value=t;
 $('#ocrStatus').textContent=t?'文字を読み取りました。内容を確認してください。':'読み取れませんでした。画像を見ながら入力してください。'}catch{$('#ocrStatus').textContent='画像を見ながら入力してください。'}else $('#ocrStatus').textContent='このブラウザは画像の自動文字認識に未対応です。画像を見ながら入力してください。'}
 function options(v,c){return v.map(x=>`<option ${x===c?'selected':''}>${x}</option>`).join('')}
 function esc(s){return String(s).replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]))}
-function draft(){ $('#itemList').innerHTML=items.map(i=>`<div class="item-row" data-id="${i.id}"><div class="item-top"><input aria-label="品名" data-f="name" value="${esc(i.name)}"><input aria-label="金額" data-f="amount" type="number" inputmode="numeric" min="0" value="${i.amount}"><button type="button" class="remove-item">×</button></div><div class="item-category"><select aria-label="大分類" data-f="main">${options(Object.keys(C),i.main)}</select><select aria-label="内訳" data-f="sub">${options(C[i.main]||['その他'],i.sub)}</select></div></div>`).join('');
+function draft(){
+$('#itemList').innerHTML=items.map(i=>`<div class="item-row" data-id="${i.id}">
+  <div class="item-card-head">
+    <span class="category-illustration" aria-hidden="true">${categoryIcon(i.main,i.sub)}</span>
+    <label class="item-name-field"><span>品名</span><input aria-label="品名" data-f="name" value="${esc(i.name)}"></label>
+    <button type="button" class="remove-item" aria-label="この品目を削除">×</button>
+  </div>
+  <div class="item-fields">
+    <label class="item-amount-field"><span>金額</span><span class="amount-input"><input aria-label="金額" data-f="amount" type="number" inputmode="numeric" min="0" value="${i.amount}"><b>円</b></span></label>
+    <label><span>大分類</span><select aria-label="大分類" data-f="main">${options(Object.keys(C),i.main)}</select></label>
+    <label><span>内訳</span><select aria-label="内訳" data-f="sub">${options(C[i.main]||['その他'],i.sub)}</select></label>
+  </div>
+</div>`).join('');
 $('#reviewTotal').textContent=yen(items.reduce((s,i)=>s+(+i.amount||0),0))}
 function reviewInput(){let p=parse($('#rawInput').value);
 if(!p.length)return toast('品名と金額、または合計を入力してください');
