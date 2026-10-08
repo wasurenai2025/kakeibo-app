@@ -188,3 +188,37 @@ body{background:linear-gradient(180deg,#e8f8f7 0%,#edf7fd 100%)}
 .manual-added-item button{border:0;border-radius:9px;background:#fff0f3;color:#bd3556;width:36px;height:36px;font-weight:900}
 .manual-total{margin-bottom:0}
 @media(max-width:370px){.choice-grid button{padding:9px 10px;font-size:.9rem}.calc-keys button{min-height:48px}}
+
+
+/* ホームメニューと分類イラスト */
+.home-menu{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin:16px 0 4px}
+.home-menu-button{min-width:0;border:1px solid #d8eaec;border-radius:17px;background:#fff;padding:12px 6px 11px;color:var(--ink);display:flex;flex-direction:column;align-items:center;gap:3px;box-shadow:0 6px 16px rgba(16,43,79,.06)}
+.home-menu-button.active{background:linear-gradient(180deg,#e7faf5,#eef9ff);border-color:#91dbcd}
+.home-menu-icon{display:grid;place-items:center;width:42px;height:42px;border-radius:14px;background:#e6f8f4;font-size:1.3rem;color:var(--mint-dark)}
+.home-menu-button:nth-child(2) .home-menu-icon{background:#eef7ff}
+.home-menu-button:nth-child(3) .home-menu-icon{background:#fff0f4}
+.home-menu-button strong{font-size:.88rem;white-space:nowrap}
+.home-menu-button small{font-size:.66rem;color:var(--muted);white-space:nowrap}
+.category-illustration{display:grid;place-items:center;width:44px;height:44px;border-radius:14px;background:linear-gradient(145deg,#e6faf4,#eef8ff);font-size:1.45rem;border:1px solid #d6eeea;box-shadow:0 3px 8px rgba(16,43,79,.06)}
+.category-illustration.small{width:34px;height:34px;border-radius:11px;font-size:1.15rem;box-shadow:none}
+.item-top{grid-template-columns:44px minmax(0,1fr) 100px 36px;align-items:center}
+.item-category{margin-left:52px}
+.category-heading{display:flex;align-items:center;gap:9px;font-weight:850}
+.category-card li .sub-label{display:flex;align-items:center;gap:7px}
+.mini-icon{display:inline-grid;place-items:center;width:26px;height:26px;border-radius:8px;background:#eef9f7;font-size:1rem}
+.chip{display:inline-flex;align-items:center;gap:5px}
+.chip b{font-size:1rem}
+.bottom-nav{gap:8px;padding-left:12px;padding-right:12px}
+.nav-item{min-height:58px;border-radius:15px;padding:6px 3px}
+.nav-item.active{background:linear-gradient(180deg,#e7faf5,#eef8ff);color:var(--mint-dark)}
+.nav-item span{font-size:1.25rem}
+@media(max-width:370px){
+  .home-menu{gap:6px}
+  .home-menu-button{padding-left:3px;padding-right:3px}
+  .home-menu-button strong{font-size:.78rem}
+  .home-menu-button small{font-size:.6rem}
+  .item-top{grid-template-columns:40px minmax(0,1fr) 84px 34px;gap:6px}
+  .category-illustration{width:40px;height:40px}
+  .item-category{margin-left:46px}
+}
+
