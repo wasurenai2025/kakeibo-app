@@ -159,7 +159,7 @@
 <div class="listening" id="listeningState" hidden>
 <span class="pulse">🎤</span>
 <strong>聞いています…</strong>
-<small>終わったら「停止」を押してください</small>
+<small>最初に日付を一度だけ。停止するまで同じ日付です</small>
 </div>
 <div id="receiptPreview" class="receipt-preview" hidden>
 <img id="receiptImage" alt="選択したレシート">
@@ -167,9 +167,9 @@
 </p>
 </div>
 <label class="input-label" for="rawInput">内容を入力</label>
-<textarea id="rawInput" rows="5" placeholder="例：合計3500円、肉500円＋700円＋800円、残りは野菜">
+<textarea id="rawInput" rows="5" placeholder="例：10月8日、じゃがいも350円、豚肉550円、鮭380円">
 </textarea>
-<p class="field-help">1品ずつなら「キャベツ 198円、洗剤 298円」のように入力できます。</p>
+<p class="field-help">音声例：「10月8日」のあと「じゃがいも350円」「豚肉550円」「鮭380円」と続けて話せます。</p>
 <div class="dialog-actions">
 <button type="button" class="secondary-button" id="stopVoiceBtn" hidden>音声を停止</button>
 <button type="button" class="primary-button" id="parseBtn">内容を確認する</button>
@@ -237,7 +237,8 @@
 </dialog>
 <div class="toast" id="toast" role="status">
 </div>
-<script src="./app.js?v=20261005-3">
+<script src="./app.js?v=20261008-1">
 </script>
 </body>
 </html>
+
