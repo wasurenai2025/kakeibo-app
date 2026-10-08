@@ -226,7 +226,7 @@ body{background:linear-gradient(180deg,#e8f8f7 0%,#edf7fd 100%)}
 .sheet-dialog{overflow:hidden}
 .sheet{overflow-y:auto;overflow-x:hidden}
 .item-row{min-width:0;max-width:100%}
-.item-card-head{display:grid;grid-template-columns:44px minmax(0,1fr) 48px;gap:10px;align-items:end}
+.item-card-head{display:grid;grid-template-columns:minmax(0,1fr) 48px;gap:10px;align-items:end}
 .item-card-head .category-illustration{align-self:center}
 .item-card-head label,.item-fields label{display:block;min-width:0}
 .item-card-head label>span,.item-fields label>span:first-child{display:block;margin:0 0 6px;color:var(--muted);font-size:.78rem;font-weight:800}
@@ -243,8 +243,7 @@ body{background:linear-gradient(180deg,#e8f8f7 0%,#edf7fd 100%)}
   .item-amount-field{grid-column:1/-1}
 }
 @media(max-width:370px){
-  .item-card-head{grid-template-columns:40px minmax(0,1fr) 46px;gap:8px}
-  .item-card-head .category-illustration{width:40px;height:40px}
+  .item-card-head{grid-template-columns:minmax(0,1fr) 46px;gap:8px}
   .item-card-head .remove-item{width:46px}
 }
 
