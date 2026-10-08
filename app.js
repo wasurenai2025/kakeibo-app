@@ -5,6 +5,7 @@ const RULES=[['野菜',/野菜|キャベツ|白菜|トマト|玉ねぎ|玉葱|�
 const S=Object.fromEntries(Object.entries(C).flatMap(([m,ss])=>ss.map(s=>[s,m]))),$=s=>document.querySelector(s),yen=n=>`¥${Math.round(+n||0).toLocaleString('ja-JP')}`,month=()=>new Date().toISOString().slice(0,7),uid=()=>crypto.randomUUID?.()||Date.now()+'-'+Math.random();
 
 let records=JSON.parse(localStorage.getItem('kakeibo-records-v1')||'[]'),items=[],editing=null,rec=null;
+let incomeByMonth=JSON.parse(localStorage.getItem('kakeibo-income-v1')||'{}');
 
 function save(){localStorage.setItem('kakeibo-records-v1',JSON.stringify(records));
 render()}
@@ -91,10 +92,10 @@ function draft(){
 $('#itemList').innerHTML=items.map(i=>`<div class="item-row" data-id="${i.id}">
   <div class="item-card-head">
     <label class="item-name-field"><span>品名</span><input aria-label="品名" data-f="name" value="${esc(i.name)}"></label>
+    <label class="item-amount-field"><span>金額</span><span class="amount-input"><input aria-label="金額" data-f="amount" type="number" inputmode="numeric" min="0" value="${i.amount}"><b>円</b></span></label>
     <button type="button" class="remove-item" aria-label="この品目を削除">×</button>
   </div>
   <div class="item-fields">
-    <label class="item-amount-field"><span>金額</span><span class="amount-input"><input aria-label="金額" data-f="amount" type="number" inputmode="numeric" min="0" value="${i.amount}"><b>円</b></span></label>
     <label><span>大分類</span><select aria-label="大分類" data-f="main">${options(Object.keys(C),i.main)}</select></label>
     <label><span>内訳</span><select aria-label="内訳" data-f="sub">${options(C[i.main]||['その他'],i.sub)}</select></label>
   </div>
@@ -274,11 +275,27 @@ async function importCsv(file){
     toast(`${imported.length}件を読み込みました`);
   }catch(error){toast('CSVを読み込めませんでした')}
 }
-function render(){let a=filtered(month()),t=a.reduce((s,r)=>s+total(r),0),card=a.filter(r=>r.payment==='card').reduce((s,r)=>s+total(r),0);
-$('#monthTotal').textContent=yen(t);
-$('#monthCardTotal').textContent=yen(card);
-histories();
-summary()}
+function previousMonthKey(key){let [year,mon]=key.split('-').map(Number),d=new Date(year,mon-2,1);return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`}
+function itemTotalsFor(key,main){let totals={};filtered(key).flatMap(r=>r.items).filter(i=>!main||i.main===main).forEach(i=>totals[i.sub]=(totals[i.sub]||0)+(+i.amount||0));return totals}
+function renderHome(){
+  const key=month(),now=new Date(),a=filtered(key),spending=a.reduce((sum,r)=>sum+total(r),0),income=+incomeByMonth[key]||0,remaining=income-spending;
+  $('#homeMonthTitle').textContent=(now.getMonth()+1)+'月の家計';
+  $('#daysLeft').textContent='今月はあと'+(new Date(now.getFullYear(),now.getMonth()+1,0).getDate()-now.getDate())+'日';
+  $('#monthIncome').textContent=yen(income);$('#monthTotal').textContent=yen(spending);$('#monthRemaining').textContent=yen(remaining);
+  $('#monthRemaining').classList.toggle('negative',remaining<0);
+  $('#budgetProgress').style.width=(income?Math.min(100,spending/income*100):0)+'%';
+  const foodTotals=itemTotalsFor(key,'食費'),foodEntries=Object.entries(foodTotals).sort((a,b)=>b[1]-a[1]),foodTotal=foodEntries.reduce((sum,[,value])=>sum+value,0),maxFood=Math.max(...foodEntries.map(([,value])=>value),1);
+  $('#homeFoodTotal').textContent=yen(foodTotal);
+  $('#homeFoodList').innerHTML=foodEntries.length?foodEntries.slice(0,4).map(([sub,value],index)=>`<div class="home-food-row tone-${index+1}"><span class="food-name"><b aria-hidden="true">${categoryIcon('食費',sub)}</b>${esc(sub)}</span><strong>${yen(value)}</strong><span class="food-bar"><i style="width:${value/maxFood*100}%"></i></span></div>`).join(''):'<div class="home-food-empty">食費を保存すると、ここに内訳が表示されます</div>';
+  const previousKey=previousMonthKey(key),previousRecords=filtered(previousKey),currentTotals=itemTotalsFor(key),previousTotals=itemTotalsFor(previousKey);
+  if(!previousRecords.length)$('#homeInsight').textContent='記録がたまると、先月と比較できます';
+  else{
+    const improvements=Object.entries(previousTotals).map(([name,value])=>({name,diff:value-(currentTotals[name]||0)})).filter(x=>x.diff>0).sort((a,b)=>b.diff-a.diff);
+    if(improvements.length){let best=improvements[0];$('#homeInsight').textContent=best.name+'が先月より'+best.diff.toLocaleString('ja-JP')+'円減りました'}
+    else{let previousSpending=previousRecords.reduce((sum,r)=>sum+total(r),0),difference=spending-previousSpending;$('#homeInsight').textContent=difference>0?'支出が先月より'+difference.toLocaleString('ja-JP')+'円増えています':'先月とほぼ同じペースです'}
+  }
+}
+function render(){renderHome();histories();summary()}
 function showView(viewId){document.querySelectorAll('.view').forEach(x=>x.classList.toggle('active',x.id===viewId));
 document.querySelectorAll('[data-view]').forEach(x=>x.classList.toggle('active',x.dataset.view===viewId));
 window.scrollTo({top:0,behavior:'smooth'});render()}
@@ -316,6 +333,7 @@ save()}};
 $('#historyMonth').onchange=histories;
 $('#summaryMonth').onchange=summary;
 $('#helpBtn').onclick=()=>$('#helpDialog').showModal();
+$('#incomeEditBtn').onclick=()=>{let key=month(),current=+incomeByMonth[key]||0,value=prompt('今月の収入を入力してください（円）',current||'');if(value===null)return;let amount=num(value);incomeByMonth[key]=amount;localStorage.setItem('kakeibo-income-v1',JSON.stringify(incomeByMonth));renderHome();toast('今月の収入を設定しました')};
 $('#exportExcelBtn').onclick=exportExcel;
 $('#exportCsvBtn').onclick=exportCsv;
 $('#importCsvInput').onchange=e=>{if(e.target.files[0])importCsv(e.target.files[0]);e.target.value=''};
