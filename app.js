@@ -90,7 +90,6 @@ function esc(s){return String(s).replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;',
 function draft(){
 $('#itemList').innerHTML=items.map(i=>`<div class="item-row" data-id="${i.id}">
   <div class="item-card-head">
-    <span class="category-illustration" aria-hidden="true">${categoryIcon(i.main,i.sub)}</span>
     <label class="item-name-field"><span>品名</span><input aria-label="品名" data-f="name" value="${esc(i.name)}"></label>
     <button type="button" class="remove-item" aria-label="この品目を削除">×</button>
   </div>
@@ -395,8 +394,8 @@ function ensureManualPanel(){
   $('#manualReviewBtn').onclick=finishManualEntry;
 }
 function renderManualChoices(){
-  $('#manualMainButtons').innerHTML=Object.keys(C).map(x=>`<button type="button" data-main="${esc(x)}" class="${x===manualMain?'selected':''}">${categoryIcon(x,'')} ${esc(x)}</button>`).join('');
-  $('#manualSubButtons').innerHTML=(C[manualMain]||['その他']).map(x=>`<button type="button" data-sub="${esc(x)}" class="${x===manualSub?'selected':''}">${categoryIcon(manualMain,x)} ${esc(x)}</button>`).join('');
+  $('#manualMainButtons').innerHTML=Object.keys(C).map(x=>`<button type="button" data-main="${esc(x)}" class="${x===manualMain?'selected':''}">${esc(x)}</button>`).join('');
+  $('#manualSubButtons').innerHTML=(C[manualMain]||['その他']).map(x=>`<button type="button" data-sub="${esc(x)}" class="${x===manualSub?'selected':''}">${esc(x)}</button>`).join('');
   $('#manualMainButtons').onclick=e=>{if(!e.target.dataset.main)return;manualMain=e.target.dataset.main;manualSub=C[manualMain][0];renderManualChoices();updateCalcDisplay()};
   $('#manualSubButtons').onclick=e=>{if(!e.target.dataset.sub)return;manualSub=e.target.dataset.sub;renderManualChoices();updateCalcDisplay()};
 }
