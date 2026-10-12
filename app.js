@@ -33,6 +33,7 @@ let f=RULES.find(([,r])=>r.test(n)),sub=f?.[0]||'その他';
 return{main:S[sub]||'その他',sub}}
 function normalizeDigits(v){return String(v).replace(/[０-９]/g,d=>'０１２３４５６７８９'.indexOf(d))}
 function num(v){return +normalizeDigits(v).replace(/[，,]/g,'')||0}
+function normalizeReceiptLine(line){return normalizeDigits(line).replace(/[￥]/g,'¥').replace(/[，]/g,',').replace(/(\d),\s+(?=\d)/g,'$1,').replace(/¥\s*(\d{1,3})\s+(?=\d{3}\b)/g,'¥$1,').replace(/\s+/g,' ').trim()}
 const RECEIPT_SKIP=/(?:領収|レシート|お客様|電話|TEL|営業時間|小売店|店舗|支店|レジ|担当|責任者|取引|伝票|バーコード|商品コード|会員|ポイント|クーポン|値引(?:額)?|割引|小計|合計|総額|お買上|買上点数|点数|課税|非課税|対象額|消費税|内税|外税|税率|現金|クレジット|カード|電子マネー|預かり|お預り|釣り|おつり|釣銭|返品|返金|営業時間|平日|土日|祝日|ありがとう|またのご来店|https?:|www\.|No[.：:]|番号)/i;
 function receiptDate(text){
   const x=normalizeDigits(text),match=x.match(/(20\d{2})\s*[年\/.\-]\s*(\d{1,2})\s*[月\/.\-]\s*(\d{1,2})\s*日?/);
@@ -40,7 +41,7 @@ function receiptDate(text){
   return date.getFullYear()===year&&date.getMonth()===mon-1&&date.getDate()===day?`${year}-${String(mon).padStart(2,'0')}-${String(day).padStart(2,'0')}`:'';
 }
 function receiptTotal(text){
-  const lines=String(text||'').split(/\r?\n/).map(line=>normalizeDigits(line).replace(/[￥]/g,'¥').replace(/[，]/g,',').replace(/\s+/g,' ').trim()).filter(Boolean);let waiting=false,total=0;
+  const lines=String(text||'').split(/\r?\n/).map(normalizeReceiptLine).filter(Boolean);let waiting=false,total=0;
   for(const line of lines){
     if(/小計|税|点数/.test(line)){waiting=false;continue}
     if(/(?:総合計|合計|お買上(?:額|合計)?|お支払(?:額|合計)?)/.test(line)){
@@ -55,11 +56,11 @@ function receiptMetaLine(line){
   return !line||RECEIPT_SKIP.test(line)||/^\s*(?:FOOD\s*&\s*DRUG|GENKY|ゲンキー)\s*$/i.test(line)||/\d{2,4}[-‐–—]\d{2,4}[-‐–—]\d{3,4}/.test(line)||/20\d{2}\s*[年\/.\-]\s*\d{1,2}\s*[月\/.\-]\s*\d{1,2}/.test(line)||/^\s*\d{1,2}\s*[:時]\s*\d{2}/.test(line)||/\d+(?:\.\d+)?\s*%/.test(line);
 }
 function receiptProductName(value){
-  return value.replace(/^[◇◆■●○□※＊*・\s]+/,'').replace(/[※＊*]+$/,'').replace(/\s+(?:@\s*)?[\d,]+(?:円)?(?:\s*[x×]\s*\d+)?$/i,'').replace(/\s{2,}/g,' ').trim();
+  return value.replace(/^[◇◆■●○□※＊*・\s]+/,'').replace(/^(?:外|内)\s*\d{1,2}\s*/,'').replace(/[※＊*]+$/,'').replace(/\s+(?:@\s*)?[\d,]+(?:円)?(?:\s*[x×]\s*\d+)?$/i,'').replace(/\s{2,}/g,' ').trim();
 }
-function usableReceiptName(name){return name.length>=2&&name.length<=60&&!receiptMetaLine(name)&&/[ぁ-んァ-ヶ一-龠々A-Za-z]/.test(name)&&!/^\d[\d\s\-/:.]*$/.test(name)}
+function usableReceiptName(name){return name.length>=2&&name.length<=60&&!receiptMetaLine(name)&&/[ぁ-んァ-ヶ一-龠々A-Za-z]/.test(name)&&!/^\d[\d\s\-/:.]*$/.test(name)&&!/^\d{5,}[ぁ-んァ-ヶ一-龠々]{1,10}$/.test(name)}
 function extractReceiptProducts(text){
-  const lines=String(text||'').split(/\r?\n/).map(line=>normalizeDigits(line).replace(/[￥]/g,'¥').replace(/[，]/g,',').replace(/\s+/g,' ').trim()).filter(Boolean),items=[];let pending='';
+  const lines=String(text||'').split(/\r?\n/).map(normalizeReceiptLine).filter(Boolean),items=[];let pending='';
   const add=(name,amount)=>{name=receiptProductName(name);amount=num(amount);if(!usableReceiptName(name)||amount<=0||amount>999999)return;let key=name+'|'+amount;if(!items.some(item=>item.key===key))items.push({name,amount,key})};
   for(const line of lines){
     if(receiptMetaLine(line)){pending='';continue}
