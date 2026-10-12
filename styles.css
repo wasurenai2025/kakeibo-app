@@ -57,6 +57,11 @@ button,label{touch-action:manipulation}
 .receipt-preview{border:1px solid var(--line);border-radius:16px;padding:10px;margin-bottom:18px;background:var(--soft)}
 .receipt-preview img{display:block;width:100%;height:180px;object-fit:contain;border-radius:10px;background:#dde3ec}
 .receipt-preview p{margin:9px 4px 2px;color:var(--muted);font-size:.82rem}
+.ocr-auth-panel{margin-top:12px;padding:14px;border:1px solid #cfe5e8;border-radius:14px;background:#fff;text-align:center}
+.ocr-auth-panel strong,.ocr-auth-panel small{display:block}
+.ocr-auth-panel strong{font-size:.9rem;color:var(--ink)}
+.ocr-auth-panel small{margin:6px 0 12px;color:var(--muted);font-size:.74rem;line-height:1.5}
+.google-signin-button{min-height:44px;display:flex;justify-content:center}
 .review-meta{display:grid;gap:16px}
 .review-meta fieldset{border:0;padding:0;margin:0}
 .review-meta legend{font-weight:750;margin-bottom:8px}

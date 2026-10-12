@@ -7,7 +7,7 @@
 <meta name="description" content="音声・手入力・レシート写真から、かんたんに記録できる家計簿">
 <title>かんたん家計簿</title>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23155eef'/%3E%3Cpath d='M17 18h30v30H17z' fill='white'/%3E%3Cpath d='M22 27h20M22 34h9M35 34h7M22 41h12' stroke='%23155eef' stroke-width='4' stroke-linecap='round'/%3E%3C/svg%3E">
-<link rel="stylesheet" href="./styles.css?v=20261009-7">
+<link rel="stylesheet" href="./styles.css?v=20261012-1">
 <link rel="manifest" href="./manifest.webmanifest">
 <link rel="apple-touch-icon" href="./app-icon.png">
 </head>
@@ -131,6 +131,11 @@
 <img id="receiptImage" alt="選択したレシート">
 <p id="ocrStatus">
 </p>
+<div id="ocrAuthPanel" class="ocr-auth-panel" hidden>
+<strong>安全な文字読み取りのため、Googleで確認します</strong>
+<small>家計簿の利用者本人であることだけを確認します。パスワードは家計簿には渡りません。</small>
+<div id="googleSignInButton" class="google-signin-button"></div>
+</div>
 </div>
 <label class="input-label" for="rawInput">内容を入力</label>
 <textarea id="rawInput" rows="5" placeholder="例：10月8日、じゃがいも350円、豚肉550円、鮭380円">
@@ -177,7 +182,7 @@
 </div>
 <label class="input-label" for="memoInput">メモ（任意）</label>
 <input type="text" id="memoInput" placeholder="例：スーパーでまとめ買い">
-<p class="save-note">この端末内に保存します。API料金はかかりません。</p>
+<p class="save-note">家計簿データはこの端末内に保存します。レシート画像は文字読み取り時だけGoogle Cloudへ送信し、保存しません。</p>
 <div class="dialog-actions sticky-actions">
 <button type="button" class="secondary-button" id="backBtn">入力に戻る</button>
 <button type="button" class="primary-button" id="saveBtn">この内容で保存</button>
@@ -194,7 +199,8 @@
 <li>支払い方法を選んで保存します</li>
 <li>「履歴」からいつでも編集できます</li>
 </ol>
-<p>音声・画像の文字認識は、お使いのブラウザが対応している場合に端末側の機能を使います。</p>
+<p>音声入力は端末の機能を使用します。レシート画像は、本人確認後にGoogle Cloud Visionへ一時送信して文字を読み取り、画像自体は保存しません。</p>
+<p><a href="./privacy.html" target="_blank" rel="noopener">プライバシーについて確認する</a></p>
 <h3>スマホに追加する</h3>
 <p>iPhoneは共有ボタンから「ホーム画面に追加」、Androidはブラウザのメニューから「アプリをインストール」を選びます。</p>
 <button type="button" class="secondary-button install-button" id="installAppBtn" hidden>ホーム画面に追加</button>
@@ -203,7 +209,8 @@
 </dialog>
 <div class="toast" id="toast" role="status">
 </div>
-<script src="./app.js?v=20261009-5">
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<script src="./app.js?v=20261012-1">
 </script>
 </body>
 </html>

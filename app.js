@@ -4,6 +4,10 @@ const RULES=[['野菜',/野菜|キャベツ|白菜|トマト|玉ねぎ|玉葱|�
 
 const S=Object.fromEntries(Object.entries(C).flatMap(([m,ss])=>ss.map(s=>[s,m]))),$=s=>document.querySelector(s),yen=n=>`¥${Math.round(+n||0).toLocaleString('ja-JP')}`,month=()=>new Date().toISOString().slice(0,7),uid=()=>crypto.randomUUID?.()||Date.now()+'-'+Math.random();
 
+const OCR_API='https://kakeibo-ocr-669866850078.asia-northeast1.run.app/ocr';
+const GOOGLE_CLIENT_ID='669866850078-r63av706j2f77q06k0396dug3je8j3uv.apps.googleusercontent.com';
+let googleIdToken='',pendingReceiptFile=null,googleButtonRendered=false;
+
 let records=JSON.parse(localStorage.getItem('kakeibo-records-v1')||'[]'),items=[],editing=null,rec=null;
 let incomeByMonth=JSON.parse(localStorage.getItem('kakeibo-income-v1')||'{}');
 
@@ -80,12 +84,36 @@ rec.onerror=()=>toast('聞き取れませんでした。文字でも入力でき
 rec.onend=()=>{$('#listeningState').hidden=true;$('#stopVoiceBtn').hidden=true};
 rec.start()}
 function stop(){try{rec?.stop()}catch{}}
-async function receipt(file){$('#receiptImage').src=URL.createObjectURL(file);
-$('#receiptPreview').hidden=false;
-$('#ocrStatus').textContent='画像を確認しています…';
-if('TextDetector'in window)try{let b=await createImageBitmap(file),r=await new TextDetector().detect(b),t=r.map(x=>x.rawValue).join('\n');
-$('#rawInput').value=t;
-$('#ocrStatus').textContent=t?'文字を読み取りました。内容を確認してください。':'読み取れませんでした。画像を見ながら入力してください。'}catch{$('#ocrStatus').textContent='画像を見ながら入力してください。'}else $('#ocrStatus').textContent='このブラウザは画像の自動文字認識に未対応です。画像を見ながら入力してください。'}
+function fileAsBase64(file){return new Promise((resolve,reject)=>{let reader=new FileReader();reader.onload=()=>resolve(String(reader.result).split(',')[1]||'');reader.onerror=()=>reject(reader.error);reader.readAsDataURL(file)})}
+function waitForGoogle(){return new Promise((resolve,reject)=>{let tries=0,timer=setInterval(()=>{if(window.google?.accounts?.id){clearInterval(timer);resolve()}else if(++tries>50){clearInterval(timer);reject(Error('Googleログインを読み込めませんでした。'))}},100)})}
+async function showGoogleSignIn(){
+  $('#ocrAuthPanel').hidden=false;
+  $('#ocrStatus').textContent='下のボタンからGoogleでログインしてください。';
+  try{
+    await waitForGoogle();
+    google.accounts.id.initialize({client_id:GOOGLE_CLIENT_ID,callback:async response=>{
+      googleIdToken=response.credential||'';
+      $('#ocrAuthPanel').hidden=true;
+      if(pendingReceiptFile)await runCloudOcr(pendingReceiptFile);
+    }});
+    if(!googleButtonRendered){google.accounts.id.renderButton($('#googleSignInButton'),{theme:'outline',size:'large',shape:'pill',text:'signin_with',locale:'ja',width:280});googleButtonRendered=true}
+  }catch{$('#ocrStatus').textContent='Googleログインを表示できませんでした。通信を確認し、もう一度お試しください。'}
+}
+async function runCloudOcr(file){
+  $('#ocrStatus').textContent='レシートの文字を読み取っています…';
+  try{
+    const image=await fileAsBase64(file),response=await fetch(OCR_API,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+googleIdToken},body:JSON.stringify({image})}),result=await response.json().catch(()=>({}));
+    if(response.status===401){googleIdToken='';googleButtonRendered=false;$('#googleSignInButton').replaceChildren();await showGoogleSignIn();return}
+    if(!response.ok)throw Error(result.error||'文字を読み取れませんでした。');
+    const text=String(result.text||'').trim();$('#rawInput').value=text;
+    $('#ocrStatus').textContent=text?'文字を読み取りました。下の内容を確認・修正してください。':'文字を見つけられませんでした。画像を見ながら入力してください。';
+  }catch(error){$('#ocrStatus').textContent=(error?.message||'文字を読み取れませんでした。')+' 画像を見ながら手入力もできます。'}
+}
+async function receipt(file){
+  pendingReceiptFile=file;$('#receiptImage').src=URL.createObjectURL(file);$('#receiptPreview').hidden=false;$('#ocrAuthPanel').hidden=true;
+  if(file.size>6*1024*1024){$('#ocrStatus').textContent='画像が大きすぎます。6MB以下の写真を選ぶか、画面を撮影し直してください。';return}
+  if(googleIdToken)await runCloudOcr(file);else await showGoogleSignIn();
+}
 function options(v,c){return v.map(x=>`<option ${x===c?'selected':''}>${x}</option>`).join('')}
 function esc(s){return String(s).replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]))}
 function draft(){

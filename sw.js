@@ -1,5 +1,5 @@
-const CACHE_NAME = 'kantan-kakeibo-v11';
-const ASSETS = ['./','./index.html','./styles.css','./app.js','./manifest.webmanifest','./app-icon.png','./town-banner.png'];
+const CACHE_NAME = 'kantan-kakeibo-v12';
+const ASSETS = ['./','./index.html','./privacy.html','./styles.css','./app.js','./manifest.webmanifest','./app-icon.png','./town-banner.png'];
 
 self.addEventListener('install', event => {
   event.waitUntil(caches.open(CACHE_NAME).then(cache => cache.addAll(ASSETS)));
