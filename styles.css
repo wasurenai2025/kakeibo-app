@@ -80,6 +80,8 @@ button,label{touch-action:manipulation}
 .remove-item{border:0;background:#fff1f2;color:#c52235;border-radius:10px;font-weight:800}
 .review-total{display:flex;justify-content:space-between;align-items:center;padding:18px 2px;margin:12px 0;border-top:2px solid var(--ink)}
 .review-total strong{font-size:1.6rem}
+.receipt-total-hint{margin:-4px 0 14px;padding:10px 12px;border-radius:12px;background:#eaf9f3;color:#096451;font-size:.8rem;font-weight:750;line-height:1.5}
+.receipt-total-hint.warning{background:#fff4df;color:#8a5200}
 .sticky-actions{position:sticky;bottom:-28px;background:#fff;padding:12px 0 20px}
 .message-dialog{border:0;border-radius:22px;width:min(calc(100% - 32px),430px);padding:24px;color:var(--ink)}
 .message-dialog p{color:var(--muted);line-height:1.6}

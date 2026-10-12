@@ -6,7 +6,7 @@ const S=Object.fromEntries(Object.entries(C).flatMap(([m,ss])=>ss.map(s=>[s,m]))
 
 const OCR_API='https://kakeibo-ocr-669866850078.asia-northeast1.run.app/ocr';
 const GOOGLE_CLIENT_ID='669866850078-r63av706j2f77q06k0396dug3je8j3uv.apps.googleusercontent.com';
-let googleIdToken='',pendingReceiptFile=null,googleButtonRendered=false;
+let googleIdToken='',pendingReceiptFile=null,googleButtonRendered=false,receiptDeclaredTotal=0;
 
 let records=JSON.parse(localStorage.getItem('kakeibo-records-v1')||'[]'),items=[],editing=null,rec=null;
 let incomeByMonth=JSON.parse(localStorage.getItem('kakeibo-income-v1')||'{}');
@@ -33,6 +33,46 @@ let f=RULES.find(([,r])=>r.test(n)),sub=f?.[0]||'その他';
 return{main:S[sub]||'その他',sub}}
 function normalizeDigits(v){return String(v).replace(/[０-９]/g,d=>'０１２３４５６７８９'.indexOf(d))}
 function num(v){return +normalizeDigits(v).replace(/[，,]/g,'')||0}
+const RECEIPT_SKIP=/(?:領収|レシート|お客様|電話|TEL|営業時間|小売店|店舗|支店|レジ|担当|責任者|取引|伝票|バーコード|商品コード|会員|ポイント|クーポン|値引(?:額)?|割引|小計|合計|総額|お買上|買上点数|点数|課税|非課税|対象額|消費税|内税|外税|税率|現金|クレジット|カード|電子マネー|預かり|お預り|釣り|おつり|釣銭|返品|返金|営業時間|平日|土日|祝日|ありがとう|またのご来店|https?:|www\.|No[.：:]|番号)/i;
+function receiptDate(text){
+  const x=normalizeDigits(text),match=x.match(/(20\d{2})\s*[年\/.\-]\s*(\d{1,2})\s*[月\/.\-]\s*(\d{1,2})\s*日?/);
+  if(!match)return'';let year=+match[1],mon=+match[2],day=+match[3],date=new Date(year,mon-1,day);
+  return date.getFullYear()===year&&date.getMonth()===mon-1&&date.getDate()===day?`${year}-${String(mon).padStart(2,'0')}-${String(day).padStart(2,'0')}`:'';
+}
+function receiptTotal(text){
+  const lines=String(text||'').split(/\r?\n/).map(line=>normalizeDigits(line).replace(/[￥]/g,'¥').replace(/[，]/g,',').replace(/\s+/g,' ').trim()).filter(Boolean);let waiting=false,total=0;
+  for(const line of lines){
+    if(/小計|税|点数/.test(line)){waiting=false;continue}
+    if(/(?:総合計|合計|お買上(?:額|合計)?|お支払(?:額|合計)?)/.test(line)){
+      const amounts=[...line.matchAll(/[¥]?\s*([\d,]+)\s*円?/g)].map(match=>num(match[1])).filter(value=>value>0);
+      if(amounts.length)total=amounts.at(-1);waiting=!amounts.length;continue
+    }
+    if(waiting){const match=line.match(/^¥?\s*([\d,]+)\s*円?/);if(match)total=num(match[1]);waiting=false}
+  }
+  return total;
+}
+function receiptMetaLine(line){
+  return !line||RECEIPT_SKIP.test(line)||/^\s*(?:FOOD\s*&\s*DRUG|GENKY|ゲンキー)\s*$/i.test(line)||/\d{2,4}[-‐–—]\d{2,4}[-‐–—]\d{3,4}/.test(line)||/20\d{2}\s*[年\/.\-]\s*\d{1,2}\s*[月\/.\-]\s*\d{1,2}/.test(line)||/^\s*\d{1,2}\s*[:時]\s*\d{2}/.test(line)||/\d+(?:\.\d+)?\s*%/.test(line);
+}
+function receiptProductName(value){
+  return value.replace(/^[◇◆■●○□※＊*・\s]+/,'').replace(/[※＊*]+$/,'').replace(/\s+(?:@\s*)?[\d,]+(?:円)?(?:\s*[x×]\s*\d+)?$/i,'').replace(/\s{2,}/g,' ').trim();
+}
+function usableReceiptName(name){return name.length>=2&&name.length<=60&&!receiptMetaLine(name)&&/[ぁ-んァ-ヶ一-龠々A-Za-z]/.test(name)&&!/^\d[\d\s\-/:.]*$/.test(name)}
+function extractReceiptProducts(text){
+  const lines=String(text||'').split(/\r?\n/).map(line=>normalizeDigits(line).replace(/[￥]/g,'¥').replace(/[，]/g,',').replace(/\s+/g,' ').trim()).filter(Boolean),items=[];let pending='';
+  const add=(name,amount)=>{name=receiptProductName(name);amount=num(amount);if(!usableReceiptName(name)||amount<=0||amount>999999)return;let key=name+'|'+amount;if(!items.some(item=>item.key===key))items.push({name,amount,key})};
+  for(const line of lines){
+    if(receiptMetaLine(line)){pending='';continue}
+    const amountOnly=line.match(/^¥?\s*([\d,]+)\s*円?(?:[※＊*])?$/);
+    if(amountOnly){if(pending)add(pending,amountOnly[1]);pending='';continue}
+    const withYen=line.match(/^(.+?)\s*¥\s*([\d,]+)\s*円?(?:[※＊*])?$/),withSpace=line.match(/^(.+?)\s+([\d,]+)\s*円?(?:[※＊*])?$/);
+    const priced=withYen||withSpace;
+    if(priced){add(priced[1],priced[2]);pending='';continue}
+    const candidate=receiptProductName(line);
+    pending=usableReceiptName(candidate)&&!/^\D{0,3}\d{5,}$/.test(candidate)?candidate:'';
+  }
+  return items;
+}
 function extractSpokenDate(text){let normalized=normalizeDigits(text),m=normalized.match(/(?:(\d{4})年)?\s*(\d{1,2})月\s*(\d{1,2})日/);
 if(!m)return null;
 let year=+(m[1]||new Date().getFullYear()),mon=+m[2],day=+m[3],date=new Date(year,mon-1,day);
@@ -54,6 +94,7 @@ if(!out.length&&total)out.push({id:uid(),name:'支出',amount:total,main:'その
 return out}
 function openEntry(mode,file){editing=null;
 items=[];
+receiptDeclaredTotal=0;
 $('#rawInput').value='';
 $('#memoInput').value='';
 $('#expenseDate').value=new Date().toISOString().slice(0,10);
@@ -105,8 +146,10 @@ async function runCloudOcr(file){
     const image=await fileAsBase64(file),response=await fetch(OCR_API,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+googleIdToken},body:JSON.stringify({image})}),result=await response.json().catch(()=>({}));
     if(response.status===401){googleIdToken='';googleButtonRendered=false;$('#googleSignInButton').replaceChildren();await showGoogleSignIn();return}
     if(!response.ok)throw Error(result.error||'文字を読み取れませんでした。');
-    const text=String(result.text||'').trim();$('#rawInput').value=text;
-    $('#ocrStatus').textContent=text?'文字を読み取りました。下の内容を確認・修正してください。':'文字を見つけられませんでした。画像を見ながら入力してください。';
+    const text=String(result.text||'').trim(),products=extractReceiptProducts(text),date=receiptDate(text),declaredTotal=receiptTotal(text);if(date)$('#expenseDate').value=date;receiptDeclaredTotal=declaredTotal;
+    $('#rawInput').value=products.map(item=>`${item.name} ${item.amount}円`).join('\n');
+    const found=[date&&`日付 ${date.replaceAll('-','/')}`,declaredTotal&&`合計 ${yen(declaredTotal)}`].filter(Boolean).join('、');
+    $('#ocrStatus').textContent=products.length?`${products.length}件の商品候補を抽出しました。${found?found+'。':''}品名と金額を確認してください。`:'商品と金額を組にできませんでした。画像を見ながら手入力してください。';
   }catch(error){$('#ocrStatus').textContent=(error?.message||'文字を読み取れませんでした。')+' 画像を見ながら手入力もできます。'}
 }
 async function receipt(file){
@@ -128,7 +171,8 @@ $('#itemList').innerHTML=items.map(i=>`<div class="item-row" data-id="${i.id}">
     <label><span>内訳</span><select aria-label="内訳" data-f="sub">${options(C[i.main]||['その他'],i.sub)}</select></label>
   </div>
 </div>`).join('');
-$('#reviewTotal').textContent=yen(items.reduce((s,i)=>s+(+i.amount||0),0))}
+let itemTotal=items.reduce((s,i)=>s+(+i.amount||0),0);$('#reviewTotal').textContent=yen(itemTotal);
+let hint=$('#receiptTotalHint');if(hint){hint.hidden=!receiptDeclaredTotal;if(receiptDeclaredTotal){let same=itemTotal===receiptDeclaredTotal;hint.textContent=`レシート記載の合計 ${yen(receiptDeclaredTotal)}${same?'（商品合計と一致）':'（商品合計と違います。抜けや金額をご確認ください）'}`;hint.classList.toggle('warning',!same)}}}
 function reviewInput(){let p=parse($('#rawInput').value);
 if(!p.length)return toast('品名と金額、または合計を入力してください');
 items=p;
@@ -147,6 +191,7 @@ const total=r=>r.items.reduce((s,i)=>s+(+i.amount||0),0),filtered=m=>records.fil
 
 function edit(id){let r=records.find(x=>x.id===id);
 editing=id;
+receiptDeclaredTotal=0;
 items=r.items.map(i=>({...i,id:i.id||uid()}));
 $('#entryDialog').showModal();
 $('#capturePanel').hidden=true;
